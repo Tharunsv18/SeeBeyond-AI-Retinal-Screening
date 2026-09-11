@@ -64,3 +64,6 @@ Automated Screening Report
      |
      v
 SeeBeyond GUI# explainable-dr-detection
+## Final Hackathon Submission
+
+SeeBeyond - AI-Powered Retinal Screening System
