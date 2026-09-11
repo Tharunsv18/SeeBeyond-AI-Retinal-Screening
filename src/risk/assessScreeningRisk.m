@@ -1,16 +1,24 @@
 function risk = assessScreeningRisk(result)
 % assessScreeningRisk
-% SeeBeyond AI-assisted retinal screening risk assessment.
+% SeeBeyond AI-assisted retinal screening priority assessment.
 %
 % Prototype screening-prioritization layer.
 % NOT a clinically validated medical risk prediction model.
+%
+% IMPORTANT:
+% This assessment is intended only to support screening prioritization.
+% It must not be interpreted as a medical diagnosis or clinical risk score.
 
 risk = struct();
 
+% ============================================================
+% DEFAULT VALUES
+% ============================================================
+
 risk.score = 0;
 risk.level = "LOW";
-risk.title = "Low Screening Risk";
-risk.reason = "No major risk indicators identified by the AI screening.";
+risk.title = 'Low Screening Priority';
+risk.reason = "No major priority indicators identified by the AI screening.";
 risk.recommendation = "Continue routine eye screening and monitoring.";
 risk.factors = strings(0,1);
 
@@ -18,7 +26,7 @@ risk.drGrade = 0;
 risk.confidence = 0;
 
 risk.disclaimer = ...
-    "This risk assessment is AI-assisted screening guidance and is not a medical diagnosis. Clinical decisions should be made by a qualified eye-care professional.";
+    "This AI-assisted screening priority assessment is intended to support screening and prioritization and is not a medical diagnosis. Clinical decisions should be made by a qualified eye-care professional.";
 
 % ============================================================
 % VALIDATE INPUT
@@ -27,7 +35,7 @@ risk.disclaimer = ...
 if nargin < 1 || isempty(result) || ~isstruct(result)
 
     risk.level = "UNKNOWN";
-    risk.title = "Risk Assessment Unavailable";
+    risk.title = "Screening Priority Unavailable";
     risk.reason = "Valid screening results were not available.";
     risk.recommendation = "Repeat the screening with a valid retinal image.";
 
@@ -49,7 +57,7 @@ drGrade = max(0,min(4,drGrade));
 
 risk.drGrade = drGrade;
 
-% DR contribution
+% DR contribution to screening priority
 gradeScores = [0 20 40 65 85];
 
 risk.score = risk.score + gradeScores(drGrade + 1);
@@ -89,7 +97,7 @@ confidence = max(0,min(1,confidence));
 
 risk.confidence = confidence;
 
-% Low confidence adds uncertainty points.
+% Lower confidence increases screening uncertainty.
 if confidence < 0.50
 
     risk.score = risk.score + 10;
@@ -110,8 +118,7 @@ if isfield(result,"segmentation") && ...
 
     seg = result.segmentation;
 
-    % IMPORTANT:
-    % These are the actual fields returned by SeeBeyond.
+    % Actual fields returned by SeeBeyond.
     lesionFields = { ...
         "hardExudateMask", ...
         "haemorrhageMask", ...
@@ -138,7 +145,7 @@ if isfield(result,"segmentation") && ...
             continue;
         end
 
-        % Actual segmentation output is a logical mask.
+        % Segmentation output is a logical mask.
         pixelCount = nnz(lesionData);
 
         if pixelCount > 0
@@ -146,7 +153,7 @@ if isfield(result,"segmentation") && ...
             lesionCount = lesionCount + 1;
 
             risk.factors(end+1) = sprintf( ...
-                "%s detected by AI (%d pixels)", ...
+                "%s localized by AI (%d pixels)", ...
                 lesionLabels{k}, ...
                 pixelCount);
 
@@ -189,13 +196,13 @@ end
 risk.score = round(max(0,min(100,risk.score)));
 
 % ============================================================
-% RISK LEVEL
+% SCREENING PRIORITY LEVEL
 % ============================================================
 
 if risk.score >= 70
 
     risk.level = "HIGH";
-    risk.title = "High Screening Risk";
+    risk.title = "High Screening Priority";
 
     risk.reason = ...
         "The AI screening identified findings that warrant prompt clinical review.";
@@ -206,7 +213,7 @@ if risk.score >= 70
 elseif risk.score >= 35
 
     risk.level = "MODERATE";
-    risk.title = "Moderate Screening Risk";
+    risk.title = "Moderate Screening Priority";
 
     risk.reason = ...
         "The AI screening identified findings that warrant clinical review.";
@@ -217,10 +224,10 @@ elseif risk.score >= 35
 else
 
     risk.level = "LOW";
-    risk.title = "Low Screening Risk";
+    risk.title = "Low Screening Priority";
 
     risk.reason = ...
-        "The AI screening did not identify major risk indicators.";
+        "The AI screening did not identify major priority indicators.";
 
     risk.recommendation = ...
         "Continue routine eye screening and monitoring.";
@@ -234,7 +241,7 @@ end
 if isempty(risk.factors)
 
     risk.factors = ...
-        "No additional AI risk indicators identified";
+        "No additional AI screening priority indicators identified";
 
 end
 
@@ -242,7 +249,9 @@ end
 % DISPLAY VALUES
 % ============================================================
 
-risk.scoreText = sprintf("%d / 100",risk.score);
+risk.scoreText = sprintf( ...
+    "%d / 100", ...
+    risk.score);
 
 risk.confidenceText = sprintf( ...
     "%.2f%%", ...

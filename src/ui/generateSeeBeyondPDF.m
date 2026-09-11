@@ -1,6 +1,9 @@
-function generateSeeBeyondPDF(result, imagePath, pdfPath, risk)
+function generateSeeBeyondPDF(result,imagePath,pdfPath,risk)
 % generateSeeBeyondPDF
-% Creates a SeeBeyond AI retinal screening PDF report.
+% Creates a SeeBeyond AI-assisted retinal screening report.
+%
+% The report is intended for screening support and explainability.
+% It is not a medical diagnosis.
 
 if nargin < 4 || isempty(risk)
     risk = assessScreeningRisk(result);
@@ -8,9 +11,9 @@ end
 
 import mlreportgen.dom.*
 
-% ---------------------------------------------------------
-% Prepare output directory
-% ---------------------------------------------------------
+% ============================================================
+% PREPARE OUTPUT DIRECTORY
+% ============================================================
 
 [outDir,~,~] = fileparts(pdfPath);
 
@@ -18,43 +21,45 @@ if ~isempty(outDir) && ~exist(outDir,'dir')
     mkdir(outDir);
 end
 
-% ---------------------------------------------------------
-% Temporary directory
-% ---------------------------------------------------------
+% ============================================================
+% TEMPORARY DIRECTORY
+% ============================================================
 
 tmpDir = fullfile(tempdir, ...
     ['SeeBeyond_' datestr(now,'yyyymmdd_HHMMSSFFF')]);
 
 mkdir(tmpDir);
 
-% ---------------------------------------------------------
-% Temporary image files
-% ---------------------------------------------------------
-
 originalImg = fullfile(tmpDir,'original.png');
 analysisImg = fullfile(tmpDir,'analysis.png');
-probImg     = fullfile(tmpDir,'probabilities.png');
+probImg = fullfile(tmpDir,'probabilities.png');
 
-% ---------------------------------------------------------
-% Save original image
-% ---------------------------------------------------------
+% ============================================================
+% SAVE ORIGINAL IMAGE
+% ============================================================
 
 try
+
     if isfield(result,'image') && ~isempty(result.image)
         imwrite(result.image,originalImg);
     else
         copyfile(imagePath,originalImg);
     end
+
 catch
+
     copyfile(imagePath,originalImg);
+
 end
 
-% ---------------------------------------------------------
-% Save AI analysis image
-% ---------------------------------------------------------
+% ============================================================
+% SAVE AI ANALYSIS IMAGE
+% ============================================================
 
 try
-    if isfield(result,'analysisImage') && ~isempty(result.analysisImage)
+
+    if isfield(result,'analysisImage') && ...
+            ~isempty(result.analysisImage)
 
         imwrite(result.analysisImage,analysisImg);
 
@@ -71,12 +76,14 @@ try
     end
 
 catch
+
     copyfile(imagePath,analysisImg);
+
 end
 
-% ---------------------------------------------------------
-% Create probability chart
-% ---------------------------------------------------------
+% ============================================================
+% CREATE CLASSIFICATION PROBABILITY CHART
+% ============================================================
 
 fig = figure( ...
     'Visible','off', ...
@@ -86,7 +93,7 @@ fig = figure( ...
 try
 
     scores = double(result.classScores(:)) * 100;
-    names  = cellstr(string(result.classNames));
+    names = cellstr(string(result.classNames));
 
     barh(scores);
 
@@ -122,17 +129,17 @@ end
 
 close(fig);
 
-% ---------------------------------------------------------
-% Create PDF document
-% ---------------------------------------------------------
+% ============================================================
+% CREATE PDF DOCUMENT
+% ============================================================
 
 doc = Document(pdfPath,'pdf');
 
 try
 
-    % =====================================================
+    % ========================================================
     % TITLE
-    % =====================================================
+    % ========================================================
 
     p = mlreportgen.dom.Paragraph('SEEBEYOND');
     p.Bold = true;
@@ -140,20 +147,24 @@ try
     p.HAlign = 'center';
     append(doc,p);
 
-    p = mlreportgen.dom.Paragraph('AI-Powered Retinal Screening Report');
+    p = mlreportgen.dom.Paragraph( ...
+        'AI-Powered Retinal Screening Report');
+
     p.FontSize = '14pt';
     p.HAlign = 'center';
     append(doc,p);
 
-    p = mlreportgen.dom.Paragraph('Retinal Image Analysis & Diabetic Retinopathy Screening');
+    p = mlreportgen.dom.Paragraph( ...
+        'Retinal Image Analysis & Diabetic Retinopathy Screening');
+
     p.HAlign = 'center';
     append(doc,p);
 
     append(doc,mlreportgen.dom.Paragraph(' '));
 
-    % =====================================================
+    % ========================================================
     % SCREENING INFORMATION
-    % =====================================================
+    % ========================================================
 
     append(doc,heading('1. SCREENING INFORMATION'));
 
@@ -172,9 +183,9 @@ try
 
     append(doc,mlreportgen.dom.Paragraph(' '));
 
-    % =====================================================
+    % ========================================================
     % FUNDUS IMAGES
-    % =====================================================
+    % ========================================================
 
     append(doc,heading('2. FUNDUS IMAGE'));
 
@@ -189,7 +200,9 @@ try
 
     append(doc,mlreportgen.dom.Paragraph(' '));
 
-    p = mlreportgen.dom.Paragraph('AI Analysis / Lesion Localization');
+    p = mlreportgen.dom.Paragraph( ...
+        'AI Analysis / Lesion Localization');
+
     p.Bold = true;
     append(doc,p);
 
@@ -198,13 +211,14 @@ try
     img.Height = '2.0in';
     append(doc,img);
 
-    % =====================================================
+    % ========================================================
     % IMAGE QUALITY
-    % =====================================================
+    % ========================================================
 
     append(doc,heading('3. IMAGE QUALITY ASSESSMENT'));
 
-    qualityStatus = getValue(result,'qualityStatus','Not available');
+    qualityStatus = getValue( ...
+        result,'qualityStatus','Not available');
 
     blur = 'Not available';
     brightness = 'Not available';
@@ -219,7 +233,8 @@ try
         end
 
         if isfield(qr,'brightnessScore')
-            brightness = sprintf('%.4f',double(qr.brightnessScore));
+            brightness = sprintf( ...
+                '%.4f',double(qr.brightnessScore));
         end
 
         if isfield(qr,'fovScore')
@@ -238,13 +253,14 @@ try
 
     append(doc,mlreportgen.dom.Table(quality));
 
-    % =====================================================
+    % ========================================================
     % AI RESULT
-    % =====================================================
+    % ========================================================
 
     append(doc,heading('4. AI SCREENING RESULT'));
 
-    severity = getValue(result,'severity','Not available');
+    severity = getValue( ...
+        result,'severity','Not available');
 
     grade = 'Not available';
 
@@ -255,11 +271,17 @@ try
     confidence = 'Not available';
 
     if isfield(result,'confidencePercent')
-        confidence = sprintf('%.2f%%', ...
+
+        confidence = sprintf( ...
+            '%.2f%%', ...
             double(result.confidencePercent));
+
     elseif isfield(result,'confidence')
-        confidence = sprintf('%.2f%%', ...
+
+        confidence = sprintf( ...
+            '%.2f%%', ...
             double(result.confidence)*100);
+
     end
 
     resultTable = {
@@ -270,9 +292,9 @@ try
 
     append(doc,mlreportgen.dom.Table(resultTable));
 
-    % =====================================================
+    % ========================================================
     % CLASSIFICATION
-    % =====================================================
+    % ========================================================
 
     append(doc,heading('5. AI CLASSIFICATION BREAKDOWN'));
 
@@ -281,26 +303,35 @@ try
     img.Height = '1.9in';
     append(doc,img);
 
-    % Classification graph explanation
-    predClass = getValue(result,'drClass','Not available');
+    predClass = getValue( ...
+        result,'drClass','Not available');
+
     predConfidence = confidence;
 
     explanation = mlreportgen.dom.Paragraph( ...
-        sprintf(['The graph shows the AI probability distribution across the five diabetic retinopathy classes. ' ...
-                 'The class with the highest probability is the model prediction. ' ...
-                 'For this screening, the predicted class is %s with an AI confidence of %s. ' ...
-                 'The smaller percentages represent residual model uncertainty and do not mean that multiple DR grades are diagnosed simultaneously.'], ...
-                 char(predClass), char(predConfidence)));
+        sprintf([ ...
+        'The graph shows the AI probability distribution across ' ...
+        'the five diabetic retinopathy classes. ' ...
+        'The class with the highest probability is the model ' ...
+        'prediction. For this screening, the predicted class is ' ...
+        '%s with an AI confidence of %s. ' ...
+        'The smaller percentages represent residual model ' ...
+        'uncertainty and do not mean that multiple DR grades are ' ...
+        'diagnosed simultaneously.'], ...
+        char(predClass), ...
+        char(predConfidence)));
 
     explanation.FontSize = '9pt';
     explanation.Color = '#444444';
+
     append(doc,explanation);
 
-    % =====================================================
+    % ========================================================
     % RETINAL FEATURES
-    % =====================================================
+    % ========================================================
 
-    append(doc,heading('6. RETINAL FEATURES DETECTED BY AI'));
+    append(doc,heading( ...
+        '6. RETINAL FEATURES DETECTED BY AI'));
 
     featureTable = {
         'Retinal Feature','Pixels','Retinal Area';
@@ -317,8 +348,10 @@ try
 
         if isfield(seg,'retinaMask')
             totalPixels = nnz(seg.retinaMask);
+
         elseif isfield(seg,'vesselMask')
             totalPixels = numel(seg.vesselMask);
+
         else
             totalPixels = 1;
         end
@@ -361,48 +394,61 @@ try
 
     append(doc,ft);
 
-    % =====================================================
-    % RISK ASSESSMENT
-    % =====================================================
+    % ========================================================
+    % SCREENING PRIORITY
+    % ========================================================
 
-    append(doc,heading('7. AI SCREENING RISK ASSESSMENT'));
+    append(doc,heading( ...
+        '7. AI SCREENING PRIORITY ASSESSMENT'));
 
-    riskLevel = getValue(risk,'level','Not available');
-    riskScore = getValue(risk,'scoreText','Not available');
-    riskReason = getValue(risk,'reason','Not available');
-    riskRecommendation = getValue(risk,'recommendation','Not available');
-    riskGrade = getValue(risk,'drGradeText',grade);
-    riskConfidence = getValue(risk,'confidenceText',confidence);
+    priorityLevel = getValue( ...
+        risk,'level','Not available');
 
-    riskTable = {
+    priorityScore = getValue( ...
+        risk,'scoreText','Not available');
+
+    priorityReason = getValue( ...
+        risk,'reason','Not available');
+
+    priorityRecommendation = getValue( ...
+        risk,'recommendation','Not available');
+
+    priorityGrade = getValue( ...
+        risk,'drGradeText',grade);
+
+    priorityConfidence = getValue( ...
+        risk,'confidenceText',confidence);
+
+    priorityTable = {
         'Parameter','Value';
-        'Risk Level',riskLevel;
-        'Risk Score',riskScore;
-        'DR Grade',riskGrade;
-        'AI Confidence',riskConfidence;
-        'Assessment Reason',riskReason;
-        'Recommended Action',riskRecommendation
+        'Screening Priority',priorityLevel;
+        'Screening Priority Score',priorityScore;
+        'DR Grade',priorityGrade;
+        'AI Confidence',priorityConfidence;
+        'Assessment Reason',priorityReason;
+        'Recommended Action',priorityRecommendation
         };
 
-    rt = mlreportgen.dom.Table(riskTable);
-    rt.StyleName = 'Table';
-    rt.Width = '6.5in';
+    pt = mlreportgen.dom.Table(priorityTable);
+    pt.StyleName = 'Table';
+    pt.Width = '6.5in';
 
-    append(doc,rt);
+    append(doc,pt);
 
-    riskNote = mlreportgen.dom.Paragraph( ...
-        ['This risk assessment is AI-assisted screening guidance. ' ...
-         'It is intended to support screening and prioritization ' ...
-         'and is not a medical diagnosis.']);
+    priorityNote = mlreportgen.dom.Paragraph( ...
+        ['This AI-assisted screening priority assessment is ' ...
+         'intended to support screening and prioritization. ' ...
+         'It is not a medical diagnosis, and clinical decisions ' ...
+         'should be made by a qualified eye-care professional.']);
 
-    riskNote.FontSize = '9pt';
-    riskNote.Color = '#444444';
+    priorityNote.FontSize = '9pt';
+    priorityNote.Color = '#444444';
 
-    append(doc,riskNote);
+    append(doc,priorityNote);
 
-    % =====================================================
+    % ========================================================
     % INTERPRETATION
-    % =====================================================
+    % ========================================================
 
     append(doc,heading('8. AI INTERPRETATION'));
 
@@ -411,14 +457,17 @@ try
          '%s with an estimated AI confidence of %s. ' ...
          'The image-quality assessment was %s. ' ...
          'The AI pipeline also analyzed retinal structures and ' ...
-         'lesion-like features to provide an explainable screening result.'], ...
-         severity,confidence,qualityStatus);
+         'lesion-like features to provide an explainable ' ...
+         'screening result.'], ...
+         severity, ...
+         confidence, ...
+         qualityStatus);
 
     append(doc,mlreportgen.dom.Paragraph(interpretation));
 
-    % =====================================================
+    % ========================================================
     % RECOMMENDATION
-    % =====================================================
+    % ========================================================
 
     append(doc,heading('9. RECOMMENDED NEXT STEP'));
 
@@ -433,9 +482,9 @@ try
 
     append(doc,mlreportgen.dom.Paragraph(recommendation));
 
-    % =====================================================
+    % ========================================================
     % DISCLAIMER
-    % =====================================================
+    % ========================================================
 
     append(doc,heading('10. MEDICAL DISCLAIMER'));
 
@@ -452,9 +501,9 @@ try
 
     append(doc,mlreportgen.dom.Paragraph(' '));
 
-    % =====================================================
+    % ========================================================
     % FOOTER
-    % =====================================================
+    % ========================================================
 
     p = mlreportgen.dom.Paragraph('SEEBEYOND');
     p.Bold = true;
@@ -467,9 +516,9 @@ try
     p.HAlign = 'center';
     append(doc,p);
 
-    % -----------------------------------------------------
+    % ========================================================
     % CLOSE DOCUMENT
-    % -----------------------------------------------------
+    % ========================================================
 
     close(doc);
 
@@ -481,27 +530,31 @@ catch ME
     end
 
     if exist(pdfPath,'file')
+
         info = dir(pdfPath);
 
         if info.bytes == 0
             delete(pdfPath);
         end
+
     end
 
     if exist(tmpDir,'dir')
+
         try
             rmdir(tmpDir,'s');
         catch
         end
+
     end
 
     rethrow(ME);
 
 end
 
-% ---------------------------------------------------------
-% Cleanup
-% ---------------------------------------------------------
+% ============================================================
+% CLEANUP
+% ============================================================
 
 if exist(tmpDir,'dir')
 
@@ -515,6 +568,10 @@ end
 end
 
 
+% ============================================================
+% HELPER: HEADING
+% ============================================================
+
 function p = heading(text)
 
 p = mlreportgen.dom.Paragraph(text);
@@ -523,6 +580,10 @@ p.FontSize = '14pt';
 
 end
 
+
+% ============================================================
+% HELPER: GET VALUE
+% ============================================================
 
 function value = getValue(s,field,defaultValue)
 
