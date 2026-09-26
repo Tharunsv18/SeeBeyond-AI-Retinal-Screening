@@ -34,3 +34,16 @@ __pycache__/
 # Node.js dependencies
 node_modules/
 npm-debug.log*
+
+# MATLAB project generated metadata
+resources/
+
+# SeeBeyond deployment/build artifacts
+deployment/
+SeeBeyond-Deployment/
+SeeBeyond-Final/
+*.tar.gz
+
+# Local backend backups
+app/backend/src/server_backup.js
+app/backend/src/server_before_result_watch.js

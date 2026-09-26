@@ -10,8 +10,8 @@ fprintf('\n===== SOFT EXUDATE THRESHOLD CALIBRATION =====\n');
 
 %% Load model
 
-load('models/softExudatePatchNet.mat', ...
-    'softExudatePatchNet','valSEIdx');
+load('models/softExudatePatchNetV2.mat', ...
+    'softExudatePatchNetV2','valSEIdx');
 
 %% Paths
 
@@ -61,7 +61,7 @@ for i = 1:numImages
         i,numImages,imageID);
 
     prob = predictSoftExudateProbMap( ...
-        I,softExudatePatchNet);
+        I,softExudatePatchNetV2);
 
     fprintf('   Probability range: %.4f - %.4f\n', ...
         min(prob(:)),max(prob(:)));
